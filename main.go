@@ -19,7 +19,7 @@ func main() {
 		PORT = "3000"
 	}
 
-	router = gin.New()
+	router := gin.New()
 	// logger
 	router.Use(gin.Logger())
 
@@ -30,9 +30,8 @@ func main() {
 	routes.InvoiceRoutes(router)
 	routes.MenuRoutes(router)
 	routes.OrderItemRoutes(router)
-	routes.OrderRoutes(routes)
+	routes.OrderRoutes(router)
 	routes.TableRoutes(router)
 
-	router.Run(':' + PORT)
-
+	router.Run(":" + PORT)
 }

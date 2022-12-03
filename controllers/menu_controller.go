@@ -35,11 +35,6 @@ func GetMenus() gin.HandlerFunc {
 
 		c.JSON(http.StatusAccepted,menus)
 
-
-		
-
-		
-
 	}
 }
 

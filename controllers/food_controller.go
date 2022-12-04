@@ -34,6 +34,7 @@ func GetFoods() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "something went wrong in food handler!",
 			})
+			return
 		}
 		c.JSON(http.StatusAccepted, food)
 	}
@@ -57,12 +58,14 @@ func CreateFood() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			defer cancle()
 			return
 		}
 
 		validaionErr := validate.Struct(food)
 		if validaionErr != nil {
 			c.JSON(http.StatusBadRequest, validaionErr.Error())
+			defer cancle()
 			return
 		}
 
@@ -79,8 +82,8 @@ func CreateFood() gin.HandlerFunc {
 		food.Updated_At, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		food.ID = primitive.NewObjectID()
 		food.Food_Id = food.ID.Hex()
-		var num = toFixed(*food.Price, 2)
-		food.Price = &num
+		var num = food.Price
+		food.Price = num
 
 		result, insertErr := menuCollection.InsertOne(ctx, food)
 
@@ -88,7 +91,7 @@ func CreateFood() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "could not create the resource!",
 			})
-
+			defer cancle()
 			return
 		}
 		defer cancle()

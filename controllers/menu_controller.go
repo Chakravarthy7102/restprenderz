@@ -111,6 +111,11 @@ func CreateMenu() gin.HandlerFunc {
 	}
 }
 
+//checks for if the given start and end date's are valid timelines
+func inTimeSpan(start, end, check time.Time) bool {
+	return start.After(check) && end.After(start)
+}
+
 func EditMenu() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -135,7 +140,7 @@ func EditMenu() gin.HandlerFunc {
 
 		if menu.Start_Date != nil && menu.End_Date != nil {
 
-			if !inTimeSpan(menu.Start_Date, menu.End_Date, time.Now()) {
+			if !inTimeSpan(*menu.Start_Date, *menu.End_Date, time.Now()) {
 				msg := "Please pass the valid start and end dates"
 
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -145,21 +150,21 @@ func EditMenu() gin.HandlerFunc {
 				return
 			}
 
-			update_object = append(update_object, bson.E{"start_data", menu.Start_Date})
-			update_object = append(update_object, bson.E{"end_date", menu.End_Date})
+			update_object = append(update_object, bson.E{Key: "start_date", Value: menu.Start_Date})
+			update_object = append(update_object, bson.E{Key: "end_date", Value: menu.End_Date})
 		}
 
 		if menu.Name != "" {
-			update_object = append(update_object, bson.E{"name", menu.Name})
+			update_object = append(update_object, bson.E{Key: "name", Value: menu.Name})
 		}
 
 		if menu.Category != "" {
-			update_object = append(update_object, bson.E{"category", menu.Category})
+			update_object = append(update_object, bson.E{Key: "category", Value: menu.Category})
 		}
 
 		menu.Updated_At, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
-		update_object = append(update_object, bson.E{"updated_at", menu.Updated_At})
+		update_object = append(update_object, bson.E{Key: "updated_at", Value: menu.Updated_At})
 
 		upsert := true
 
@@ -171,7 +176,7 @@ func EditMenu() gin.HandlerFunc {
 			ctx,
 			filter,
 			bson.D{
-				{"$set", update_object},
+				{Key: "$set", Value: update_object},
 			},
 			&opt,
 		)

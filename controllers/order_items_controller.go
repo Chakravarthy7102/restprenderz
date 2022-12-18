@@ -76,7 +76,150 @@ func GetOrderItem() gin.HandlerFunc {
 	}
 }
 
-func ItemsByOrder(orderId string) (*[]models.OrderItem, error) {
+func ItemsByOrder(orderId string) ([]primitive.D, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	match_stage := bson.D{
+		{
+			"$match", bson.D{
+				{"order_id", orderId},
+			},
+		},
+	}
+
+	lookup_food_stage := bson.D{
+		{
+			"$lookup", bson.D{
+				{"from", "food"},
+				{"localField", "food_id"},
+				{"foreignFeild", "food_id"},
+				{"as", "order"},
+			},
+		},
+	}
+
+	unwind_food_stage := bson.D{
+		{
+			"$unwind", bson.D{
+				{"path", "$food"},
+				{"preserveNullAndEmptyArrays", true},
+			},
+		},
+	}
+
+	lookup_order_stage := bson.D{
+		{
+			"$lookup", bson.D{
+				{"from", "order"},
+				{"localField", "order_id"},
+				{"foreignFeild", "order_id"},
+				{"as", "order"},
+			},
+		},
+	}
+
+	unwind_orders_stage := bson.D{
+		{
+			"$unwind", bson.D{
+				{"path", "$order"},
+				{"preserveNullAndEmptyArrays", true},
+			},
+		},
+	}
+
+	lookup_table_stage := bson.D{
+		{
+			"$lookup", bson.D{
+				{"from", "table"},
+				{"localField", "order.table_id"},
+				{"foreignFeild", "table_id"},
+				{"as", "table"},
+			},
+		},
+	}
+
+	unwind_table_stage := bson.D{
+		{
+			"$unwind", bson.D{
+				{"path", "$table"},
+				{"preserveNullAndEmptyArrays", true},
+			},
+		},
+	}
+
+	project_stage := bson.D{
+		{
+			"$project", bson.D{
+				{"id", 0},
+				{"amount", 1},
+				{"total_count", 1},
+				{"food_name", "$food.name"},
+				{"food_image", "$food.food_image"},
+				{"table_number", "$table.table_number"},
+				{"table_id", "$table.table_id"},
+				{"order_id", "$order.order_id"},
+				{"price", "$food.price"},
+				{"quantity", 1},
+			},
+		},
+	}
+
+	group_stage := bson.D{
+		{
+			"$group", bson.D{
+				{
+					"_id", bson.D{
+						{"order_id", "$order_id"},
+						{"table_id", "$table_id"},
+						{"table_number", "$table_number"},
+					},
+				},
+				{"payment_due", bson.D{{"$sum", "amount"}}},
+				{"total_count", bson.D{{"$sum", 1}}},
+				{"order_items", bson.D{{"$push", "$$ROOT"}}},
+			},
+		},
+	}
+
+	project_stage_2 := bson.D{
+		{
+			"$project", bson.D{
+				{"id", 0},
+				{"payment_due", 1},
+				{"total_count", 1},
+				{"order_items", 1},
+				{"table_number", "$_id.table_number"},
+			},
+		},
+	}
+
+	cursor, err := orderItemsCollection.Aggregate(ctx, mongo.Pipeline{
+		match_stage,
+		lookup_food_stage,
+		unwind_food_stage,
+		lookup_order_stage,
+		unwind_orders_stage,
+		lookup_table_stage,
+		unwind_table_stage,
+		project_stage,
+		group_stage,
+		project_stage_2,
+	})
+
+	var orderItems []primitive.D
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err = cursor.All(ctx, &orderItems); err != nil {
+		panic(err)
+	}
+
+	defer cancel()
+
+	return orderItems, err
 
 }
 

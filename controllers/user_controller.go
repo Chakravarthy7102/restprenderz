@@ -173,7 +173,7 @@ func Login() gin.HandlerFunc {
 		//then verify the password.
 		correct, message := VerifyPassword(*foundUser.Password, *user.Password)
 
-		if correct != true {
+		if !correct {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"message": message,
 			})
@@ -183,7 +183,7 @@ func Login() gin.HandlerFunc {
 
 		//generate the token for the user.
 
-		token, refreshToken, _ := helpers.GenerateAllTokens(*&foundUser.Email, *&foundUser.First_Name, *foundUser.Last_name, *&foundUser.User_id)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_Name, *foundUser.Last_name, foundUser.User_id)
 
 		helpers.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 
